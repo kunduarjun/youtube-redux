@@ -59,3 +59,5 @@ if (!queueCheckDiv) {
     rightSideDiv.remove(); 
 }
 */
+
+console.log("Running my extension...");

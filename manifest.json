@@ -1,18 +1,26 @@
 {
+    
     "manifest_version": 2,
     "name": "YouTube Redux",
     "version": "1.0",
 
-    "description": "Allows users to disable/re-enable the right-sided panel and comments section on YouTube videos.",
+    "description": "Cleans up YouTube interface",
 
     "content_scripts": [
         {
             "matches": ["*://*.youtube.com/watch?*"],
-            "js": ["youtube-redux.js"]
+            "js": ["youtube-redux.js"],
+            "run_at": "document_idle"
         }
     ],
 
     "permissions": [
+        "tabs", 
         "*://*.youtube.com/*"
-    ]
+    ],
+
+    "background": {
+        "scripts": ["background.js"]
+    }
+
 }

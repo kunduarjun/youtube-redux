@@ -1,63 +1,87 @@
-// Separate the right and left panels of the YouTube video player into two separate variables
-const leftSideDiv = document.getElementById('below'); 
-const rightSideDiv = document.getElementById('secondary');
+// Initial console log 
+console.log("Running the extension...");
 
-// Map the tag ids with what they practically represent in the YouTube player 
-const idMapLeft = new Map([
-    ['#comments', 'comments']
-]);
-const idMapRight = new Map([
-    ['#companion', 'advertisement'], 
-    ['#panels', 'advertisement'], 
-    ['#scroll-container', 'relevant suggestion headers'],
-    ['#contents', 'suggested content for more watching']
-]);
 
-// Easy list for directions to use
-let directions = ["right", "left"]
+// Identify selectors (tag names) of sections to be removed 
+const elementsConfig = {
+    rightSidebar: [
+        { selector: 'ytd-player-legacy-desktop-watch-ads-renderer', description: 'Advertisement(s)'}, 
+        { selector: 'ytd-engagement-panel-section-list-renderer', description: 'Sponshership(s)'}, 
+        { selector: 'ytd-watch-next-secondary-results-renderer', description: 'Recommended Reels/Videos'} 
+    ],
 
-// Functions that allow for easy removal of sections on the YouTube player, based on the direction and id passed in as an arguments  
-function removeById(direction, id) {
-    let testDiv;
-    let testMap;
+    belowVideo: [
+        { selector: 'ytd-comments', description: 'Comments Section' },
+        { selector: 'ytd-merch-shelf-renderer', description: 'Merchandise Shelf'}
+    ]
+};
 
-    if (direction === "left") { testDiv = leftSideDiv.querySelector(id); testMap = idMapLeft; }
-    else if (direction === "right") { testDiv = rightSideDiv.querySelector(id); testMap = idMapRight; }
-    else { console.log(`Please enter in either right or left as your direction argument!`); return; }
 
-    if (testDiv) {
-        testDiv.remove();
-        console.log(`Tag with id '${id}' (${testMap.get(id)}) has been removed.`);
+// Function that waits for elements to exist  
+function waitForElement(selector, callback) {
+    const element = document.querySelector(selector);
+    if (element) {
+        callback(element);
     } else {
-        console.log(`Tag with id '${id}' (${testMap.get(id)}) could not be found.`);
+        setTimeout(() => waitForElement(selector, callback), 100);
     }
 }
 
-// Function that allows for the removal of every section on a specified direction of the YouTube player
-function removeSectionsByMap(direction) {
-    let selectedMap;
 
-    if (direction === "left") { selectedMap = idMapLeft; }
-    else if (direction === "right") { selectedMap = idMapRight; }
-    else { console.log(`Please enter in either right or left as your direction argument!`); return; }
-
-    for (const key of selectedMap.keys()) {
-        removeById(direction, key);
-    }
+// Removal function with error handling 
+function removeElements(container, elements) {
+    elements.forEach(({selector, description}) => {
+        try {
+            const element = container.querySelector(selector) || document.querySelector(selector);
+            if (element) {
+                element.remove();
+                console.log(`Successfully removed ${description}`);
+            } else {
+                console.log(`Not found: ${description}`);
+            }
+        } catch (error) {
+            console.log(`Error removing ${description}:`, error);
+        }
+    });
 }
 
-// Concrete function call to remove all the sections specified in both the left and right id maps 
-for (const direction of directions) {
-    removeSectionsByMap(direction)
+
+// Main execution flow
+function initializeCleanup() {
+    // Process right sidebar
+    waitForElement('#secondary', (sidebar) => {
+        removeElements(sidebar, elementsConfig.rightSidebar);
+
+        // Additional safeguard for dynamic content
+        new MutationObserver(() => {removeElements(sidebar, elementsConfig.rightSidebar);}).observe(sidebar, { childList: true, subtree: true }); 
+    });
+
+    // Process below video content
+    waitForElement('#below', (belowContainer) => {
+        removeElements(belowContainer, elementsConfig.belowVideo);
+
+        // Additional safeguard for dynamic content
+        new MutationObserver(() => {removeElements(belowContainer, elementsConfig.belowVideo);}).observe(belowContainer, { childList: true, subtree: true });
+    });
+
+    // Fallback CSS injection for stubborn elements (AI-Model Recommended…)
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `ytd-player-legacy-desktop-watch-ads-renderer, 
+    ytd-engagement-panel-section-list-renderer, 
+    ytd-watch-next-secondary-results-renderer, 
+    ytd-comments, 
+    ytd-merch-shelf-renderer { 
+    display: none !important; }`;
+    document.head.appendChild(styleElement);
 }
 
-/*
-// Remove the whole right sided panel if there is no queue in use
-const queueCheckDiv = rightSideDiv.querySelector('#container'); 
-if (!queueCheckDiv) {
-    console.log(`No queue found, removing entire right side panel…`)
-    rightSideDiv.remove(); 
-}
-*/
 
-console.log("Running my extension...");
+// Start the cleanup process
+initializeCleanup();
+
+
+// Periodic check for reoccuring elements (every 15 seconds) 
+setInterval(() => { 
+    removeElements(document, elementsConfig.rightSidebar); 
+    removeElements(document, elementsConfig.belowVideo); 
+}, 15000); 

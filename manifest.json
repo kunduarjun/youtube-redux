@@ -17,10 +17,6 @@
     "permissions": [
         "tabs", 
         "*://*.youtube.com/*"
-    ],
-
-    "background": {
-        "scripts": ["background.js"]
-    }
+    ]
 
 }

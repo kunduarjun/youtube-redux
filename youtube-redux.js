@@ -20,9 +20,12 @@ const elementsConfig = {
 // Function that waits for elements to exist  
 function waitForElement(selector, callback) {
     const element = document.querySelector(selector);
+    // If element exists (if the querySelector finds the specified selector in the document)
     if (element) {
+        // Call the specified callback function on the element
         callback(element);
     } else {
+        // Otherwise, wait for the element to load on the document… 
         setTimeout(() => waitForElement(selector, callback), 100);
     }
 }

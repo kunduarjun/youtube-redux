@@ -8,15 +8,20 @@
 
     "content_scripts": [
         {
-            "matches": ["*://*.youtube.com/watch?*"],
+            "matches": ["*://*.youtube.com/"],
             "js": ["youtube-redux.js"],
-            "run_at": "document_idle"
+            "run_at": "document_end"
         }
     ],
 
     "permissions": [
         "tabs", 
+        "webNavigation",
         "*://*.youtube.com/*"
-    ]
+    ],
+
+    "background": {
+        "scripts": ["background.js"]
+    }
 
 }

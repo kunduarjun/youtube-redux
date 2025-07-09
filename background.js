@@ -1,6 +1,6 @@
 // Listener for extension install/update
-browser.runtime.onInstalled.addListener(() => {
-    console.log("YouTube Redux initialized");
+browser.runtime.onInstalled.addListener((details) => {
+    console.log(`YouTube Redux ${details.reason} v${details.version}`); 
 });
 
 // Runs on full page load
@@ -20,6 +20,7 @@ browser.webNavigation.onHistoryStateUpdated.addListener(
     (details) => {
         if (details.url.includes('youtube.com/watch')) {
             setTimeout(() => { 
+                details.url.includes('youtube.com/watch') && 
                 browser.tabs.executeScript(details.tabId, {
                     file: '/youtube-redux.js'
                 }).catch(err => console.log("SPA Injection error: ", err));

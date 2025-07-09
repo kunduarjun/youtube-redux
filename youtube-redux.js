@@ -11,7 +11,7 @@
     const elementsConfig = {
         rightSidebar: [
             { selector: 'ytd-player-legacy-desktop-watch-ads-renderer', description: 'Advertisement(s)'}, 
-            { selector: 'ytd-engagement-panel-section-list-renderer', description: 'Sponsership(s)'}, 
+            { selector: 'ytd-engagement-panel-section-list-renderer', description: 'Sponsorship(s)'}, 
             { selector: 'ytd-watch-next-secondary-results-renderer', description: 'Recommended Reels/Videos'} 
         ],
 
@@ -40,6 +40,7 @@
 
     // Removal function with error handling 
     const removalStats = {};
+    const firstMissLogged = new Set();
     function removeElements(container, elements) {
         elements.forEach(({selector, description}) => {
             try {
@@ -48,8 +49,10 @@
                     element.remove();
                     removalStats[description] = (removalStats[description] || 0 ) + 1;
                     console.log(`Successfully removed ${description} (Total: ${removalStats[description]})`);
-                } else {
-                    console.log(`Not found: ${description}`);
+                    firstMissLogged.delete(description);
+                } else if (!firstMissLogged.has(description)) {
+                    console.log(`First check missed: ${description}`);
+                    firstMissLogged.add(description); 
                 }
             } catch (error) {
                 console.log(`Error removing ${description}:`, error);
@@ -96,6 +99,7 @@
 
         // Periodic check for reoccuring elements (every 15 seconds) 
         window.youtubeReduxInterval = setInterval(() => {
+            console.log(`[${new Date().toISOString()}] Running periodic cleanup…`); 
             removeElements(document, elementsConfig.rightSidebar);
             removeElements(document, elementsConfig.belowVideo);
         }, 15000);

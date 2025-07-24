@@ -88,11 +88,9 @@
         if (!document.getElementById('yt-redux-styles')) { 
             const styleElement = document.createElement('style');
             styleElement.id = 'yt-redux-styles'; 
-            styleElement.textContent = `ytd-player-legacy-desktop-watch-ads-renderer, 
-            ytd-engagement-panel-section-list-renderer, 
-            ytd-watch-next-secondary-results-renderer, 
-            ytd-comments, 
-            ytd-merch-shelf-renderer { 
+            styleElement.textContent = `ytd-player-legacy-desktop-watch-ads-renderer, ytd-engagement-panel-section-list-renderer { 
+            visibility: hidden !important; height: 0 !important; margin: 0 !important; }
+            ytd-watch-next-secondary-results-renderer, ytd-comments, ytd-merch-shelf-renderer { 
             display: none !important; }`;
             document.head.appendChild(styleElement);
         }

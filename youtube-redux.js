@@ -6,6 +6,32 @@
     if (window.youtubeReduxInitialized) return;
     window.youtubeReduxInitialized = true;
 
+    // Constants
+    const AD_SELECTORS = '.ytp-ad-player-overlay, .ad-showing';
+    const POLLING_INTERVAL = 30000; 
+
+    // Transitional/Ad state detection
+    let isInAdTransition = false;
+    const observers = {
+        sidebar: null,
+        belowVideo: null
+    };
+
+    // Detect YouTube's video transtions
+    document.addEventListener('yt-navigate-start', () => {
+        isInAdTransition = true;
+        console.log("Optimizing for video transition…");
+    });
+
+    document.addEventListener('yt-navigate-finish', () => {
+        isInAdTransition = false;
+        initializeCleanup(); // Restore full functionality
+    });
+
+    function checkForAd() {
+        // Double exclamation marks to convert any value to a strict boolean 
+        return !!document.querySelector(AD_SELECTORS);
+    }
 
     // Identify selectors (tag names) of sections to be removed 
     const elementsConfig = {
@@ -42,11 +68,19 @@
     const removalStats = {};
     const firstMissLogged = new Set();
     function removeElements(container, elements) {
-        elements.forEach(({selector, description}) => {
+        // Only target sidebar ads during transitions
+        const targets = (isInAdTransition || checkForAd()) ? elements.filter(e => e.selector === 'ytd-player-legacy-desktop-watch-ads-renderer') : elements; 
+        targets.forEach(({selector, description}) => {
             try {
                 const element = container.querySelector(selector) || document.querySelector(selector);
                 if (element) {
-                    element.remove();
+                    // Optimized removal during critical moments 
+                    if (isInAdTransition || checkForAd()) {
+                        element.style.display = 'none';
+                        setTimeout(() => element.remove(), 0);
+                    } else {
+                        element.remove();
+                    }
                     removalStats[description] = (removalStats[description] || 0 ) + 1;
                     console.log(`Successfully removed ${description} (Total: ${removalStats[description]})`);
                     firstMissLogged.delete(description);
@@ -64,47 +98,54 @@
     // Main execution flow
     function initializeCleanup() {
 
-        // Prevents multiple observers from existing 
-        if (window.youtubeReduxObserver) { window.youtubeReduxObserver.disconnect(); delete window.youtubeReduxObserver; }
-        // Prevents multiple timers from existing 
-        if (window.youtubeReduxInterval) { clearInterval(window.youtubeReduxInterval); window.youtubeReduxInterval = null; }
+        // Cleanup existing resources
+        observers.sidebar?.disconnect();
+        observers.belowVideo?.disconnect();
+        clearInterval(window.youtubeReduxInterval); 
+
+        if (isInAdTransition || checkForAd()) { removeElements(document, elementsConfig.rightSidebar); return; } 
 
         // Process right sidebar
         waitForElement('#secondary', (sidebar) => {
             removeElements(sidebar, elementsConfig.rightSidebar);
-            const observer = new MutationObserver(() => { removeElements(sidebar, elementsConfig.rightSidebar); });
-            observer.observe(sidebar, { childList: true, subtree: true });
-            window.youtubeReduxObserver = observer; 
+            observers.sidebar = new MutationObserver(() => { 
+                if (!isInAdTransition && !checkForAd()) { 
+                    removeElements(sidebar, elementsConfig.rightSidebar); 
+                }
+             }).observe(sidebar, { childList: true, subtree: true }); 
         }); 
 
         // Process below video content
         waitForElement('#below', (belowContainer) => {
             removeElements(belowContainer, elementsConfig.belowVideo); 
-            const belowObserver = new MutationObserver(() => {removeElements(belowContainer, elementsConfig.belowVideo);});
-            belowObserver.observe(belowContainer, { childList: true, subtree: true }); 
+            observers.belowVideo = new MutationObserver(() => {
+                if (!isInAdTransition && !checkForAd()) {
+                    removeElements(belowContainer, elementsConfig.belowVideo);
+                }
+            }).observe(belowContainer, { childList: true, subtree: true }); 
         });
 
         // Fallback CSS injection for stubborn elements
-        if (!document.getElementById('yt-redux-styles')) { 
-            const styleElement = document.createElement('style');
-            styleElement.id = 'yt-redux-styles'; 
-            styleElement.textContent = `ytd-player-legacy-desktop-watch-ads-renderer, ytd-engagement-panel-section-list-renderer { 
-            visibility: hidden !important; height: 0 !important; margin: 0 !important; }
-            ytd-watch-next-secondary-results-renderer, ytd-comments, ytd-merch-shelf-renderer { 
-            display: none !important; }`;
-            document.head.appendChild(styleElement);
-        }
+        const styleElement = document.createElement('style');
+        styleElement.id = 'yt-redux-styles'; 
+        styleElement.textContent = `ytd-player-legacy-desktop-watch-ads-renderer, ytd-engagement-panel-section-list-renderer { 
+        visibility: hidden !important; height: 0 !important; margin: 0 !important; }
+        ytd-watch-next-secondary-results-renderer, ytd-comments, ytd-merch-shelf-renderer { 
+        display: none !important; }`;
+        document.head.append(styleElement); 
 
         // Periodic check for reoccuring elements (every 15 seconds) 
-        window.youtubeReduxInterval = setInterval(() => {
-            console.log(`[${new Date().toISOString()}] Running periodic cleanup…`); 
-            removeElements(document, elementsConfig.rightSidebar);
-            removeElements(document, elementsConfig.belowVideo);
-        }, 15000);
+        window.youtubeReduxInterval = setInterval(() => { 
+            if (!isInAdTransition && !checkForAd()) {
+                console.log(`[${new Date().toISOString()}] Running periodic cleanup…`); 
+                removeElements(document, elementsConfig.rightSidebar);
+                removeElements(document, elementsConfig.belowVideo);
+            }
+        }, POLLING_INTERVAL);
     }
 
 
     // Start the cleanup process
+    new MutationObserver(() => { if (!isInAdTransition && !checkForAd()) initializeCleanup(); }).observe(document.body, { childList: true, subtree: true });
     initializeCleanup();
-    new MutationObserver(initializeCleanup).observe(document.body, { childList: true, subtree: true });
 })(); 

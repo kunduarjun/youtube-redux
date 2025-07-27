@@ -44,6 +44,10 @@
         belowVideo: [
             { selector: 'ytd-comments', description: 'Comments Section' },
             { selector: 'ytd-merch-shelf-renderer', description: 'Merchandise Shelf'}
+        ],
+
+        endOfQueue: [
+            { selector: '.html5-endscreen', description: 'End-of-queue recommendations' }
         ]
     };
 
@@ -125,13 +129,24 @@
             }).observe(belowContainer, { childList: true, subtree: true }); 
         });
 
+        // Process recommended videos that display at the end of the final video on the queue
+        waitForElement('.html5-endscreen', (endscreen) => {
+            observers.endscreen = new MutationObserver(() => {
+                removeElements(document, elementsConfig.endOfQueue);
+            }).observe(endscreen.parentElement, { childList: true });
+            // Initial Removal
+            removeElements(document, elementsConfig.endOfQueue); 
+        }, 30); 
+
         // Fallback CSS injection for stubborn elements
         const styleElement = document.createElement('style');
         styleElement.id = 'yt-redux-styles'; 
         styleElement.textContent = `ytd-player-legacy-desktop-watch-ads-renderer, ytd-engagement-panel-section-list-renderer { 
         visibility: hidden !important; height: 0 !important; margin: 0 !important; }
-        ytd-watch-next-secondary-results-renderer, ytd-comments, ytd-merch-shelf-renderer { 
-        display: none !important; }`;
+        ytd-watch-next-secondary-results-renderer, ytd-comments, ytd-merch-shelf-renderer, .html5-endscreen { 
+        display: none !important; }
+        .ytp-endscreen-content {
+        visibility: hidden !important; }`; 
         document.head.append(styleElement); 
 
         // Periodic check for reoccuring elements (every 15 seconds) 

@@ -4,10 +4,15 @@
 
     // Speed warning with dismiss option 
     const showSpeedWarning = () => {
-        if (localStorage.getItem('ytReduxHideSpeedWarning')) return;
+        if (window.warningCooldown) return;
+        window.warningCooldown = true;
+        setTimeout(() => window.warningCooldown = false, 30000); // 30s cooldown
+
+        if (localStorage.getItem('ytReduxHideSpeedWarning')) return; 
 
         const video = document.querySelector('video');
-        if (video?.playbackRate > 1.5) {
+        if (!video) { console.debug("No video element found"); return; } 
+        if (video.playbackRate > 1.5) {
             requestAnimationFrame(() => {
                 const warning = document.createElement('div');
                 warning.innerHTML = `<span>Tip: 1x speed gives smoothest transitions</span>
@@ -40,7 +45,7 @@
     }; 
 
     // Initialize after DOM settles 
-    setTimeout(showSpeedWarning, 1500); 
+    setTimeout(() => { monitorSpeedChanges(); showSpeedWarning(); }, 22500); 
 
     // Prevent multiple script executions 
     if (window.youtubeReduxInitialized) return;
@@ -66,7 +71,22 @@
     document.addEventListener('yt-navigate-finish', () => {
         isInAdTransition = false;
         initializeCleanup(); // Restore full functionality
+        console.debug("New video loaded - will check speed in 22.5s");
+        setTimeout(showSpeedWarning, 22500); 
+        monitorSpeedChanges(); 
     });
+
+    const monitorSpeedChanges = () => {
+        const video = document.querySelector('video');
+        if (!video) return;
+
+        video.addEventListener('ratechange', () => {
+            if (video.playbackRate > 1.5) {
+                console.debug(`Speed increased to ${video.playbackRate}x - will warn in 22.5s`);
+                setTimeout(showSpeedWarning, 22500);
+            }
+        });
+    };
 
     function checkForAd() {
         // Double exclamation marks to convert any value to a strict boolean 

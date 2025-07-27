@@ -1,6 +1,46 @@
 (function() {    
     // Initial console log 
-    console.log("YouTube Redux initialized at: ", new Date().toISOString()); 
+    console.debug("YouTube Redux initialized at: ", new Date().toISOString()); 
+
+    // Speed warning with dismiss option 
+    const showSpeedWarning = () => {
+        if (localStorage.getItem('ytReduxHideSpeedWarning')) return;
+
+        const video = document.querySelector('video');
+        if (video?.playbackRate > 1.5) {
+            requestAnimationFrame(() => {
+                const warning = document.createElement('div');
+                warning.innerHTML = `<span>Tip: 1x speed gives smoothest transitions</span>
+                <button aria-label="Dismiss speed warning"
+                style="margin-left: 8px; background: transparent; border: none; color: #606060; font-size: 16px; cursor: pointer; padding: 0 4px;" tabindex="0">x</button>`;
+                warning.style.cssText = `position: fixed; bottom: 20px; right: 20px; padding: 8px 20px; background: #ffeb3b; color: #000; 
+                z-index: 9999; border-radius: 4px; 
+                font-family: YouTube Noto, Roboto, Arial; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+                opacity: 0; transition: opacity 0.5s; display: flex; align-items: center;`; 
+
+                const dismissButton = warning.querySelector('button');
+                dismissButton.onclick = () => {
+                    localStorage.setItem('ytReduxHideSpeedWarning', 'true');
+                    warning.style.opacity = '0';
+                    setTimeout(() => warning.remove(), 500);
+                };
+
+                // Keyboard support
+                dismissButton.onkeydown = (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        dismissButton.click();
+                    }
+                };
+
+                document.body.appendChild(warning);
+                setTimeout(() => warning.style.opacity = '1', 1000);
+                setTimeout(() => { warning.style.opacity = '0'; setTimeout(() => warning.remove(), 500); }, 8000); 
+            });
+        } 
+    }; 
+
+    // Initialize after DOM settles 
+    setTimeout(showSpeedWarning, 1500); 
 
     // Prevent multiple script executions 
     if (window.youtubeReduxInitialized) return;
@@ -8,7 +48,7 @@
 
     // Constants
     const AD_SELECTORS = '.ytp-ad-player-overlay, .ad-showing';
-    const POLLING_INTERVAL = 30000; 
+    const POLLING_INTERVAL = 300000; 
 
     // Transitional/Ad state detection
     let isInAdTransition = false;
@@ -53,7 +93,7 @@
 
 
     // Function that waits for elements to exist  
-    function waitForElement(selector, callback, attempts = 50) {
+    function waitForElement(selector, callback, attempts = 20) {
         const element = document.querySelector(selector);
         // If element exists (if the querySelector finds the specified selector in the document)
         if (element) {
@@ -72,7 +112,7 @@
     const removalStats = {};
     const firstMissLogged = new Set();
     function removeElements(container, elements) {
-        // Only target sidebar ads during transitions
+        // Skip non-ad elements during transitions to avoid layout thrashing 
         const targets = (isInAdTransition || checkForAd()) ? elements.filter(e => e.selector === 'ytd-player-legacy-desktop-watch-ads-renderer') : elements; 
         targets.forEach(({selector, description}) => {
             try {
@@ -105,6 +145,7 @@
         // Cleanup existing resources
         observers.sidebar?.disconnect();
         observers.belowVideo?.disconnect();
+        observers.endscreen?.disconnect(); 
         clearInterval(window.youtubeReduxInterval); 
 
         if (isInAdTransition || checkForAd()) { removeElements(document, elementsConfig.rightSidebar); return; } 
@@ -136,7 +177,7 @@
             }).observe(endscreen.parentElement, { childList: true });
             // Initial Removal
             removeElements(document, elementsConfig.endOfQueue); 
-        }, 30); 
+        }); 
 
         // Fallback CSS injection for stubborn elements
         const styleElement = document.createElement('style');
@@ -149,10 +190,10 @@
         visibility: hidden !important; }`; 
         document.head.append(styleElement); 
 
-        // Periodic check for reoccuring elements (every 15 seconds) 
+        // Periodic check for reoccuring elements (every 5 minutes) 
         window.youtubeReduxInterval = setInterval(() => { 
             if (!isInAdTransition && !checkForAd()) {
-                console.log(`[${new Date().toISOString()}] Running periodic cleanup…`); 
+                console.debug(`[${new Date().toISOString()}] Running periodic cleanup…`); 
                 removeElements(document, elementsConfig.rightSidebar);
                 removeElements(document, elementsConfig.belowVideo);
             }

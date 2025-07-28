@@ -4,7 +4,7 @@
     "name": "YouTube Redux",
     "version": "1.0",
 
-    "description": "Cleans up YouTube interface by removing distactions",
+    "description": "Cleans up YouTube interface by removing distractions",
 
     "content_scripts": [
         {

@@ -4,7 +4,7 @@
     "name": "YouTube Redux",
     "version": "1.0",
 
-    "description": "Cleans up YouTube interface",
+    "description": "Cleans up YouTube interface by removing distactions",
 
     "content_scripts": [
         {
@@ -13,6 +13,12 @@
             "run_at": "document_end"
         }
     ],
+
+    "icons": {
+        "48": "icons/icon-48.png",
+        "64": "icons/icon-64.png",
+        "96": "icons/icon-96.png"
+    },
 
     "permissions": [
         "tabs", 
